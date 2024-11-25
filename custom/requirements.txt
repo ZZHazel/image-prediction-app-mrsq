@@ -10,3 +10,4 @@ keras==2.4.3
 imageai==2.1.5
 bottle==0.12.19
 requests
+urllib3==1.26.2
