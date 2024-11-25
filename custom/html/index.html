@@ -22,6 +22,10 @@
             imgElement.src = "";
 
             const xmlhttp = new XMLHttpRequest();
+            xmlhttp.timeout = 600000; // 设置超时时间，单位为毫秒
+            xmlhttp.ontimeout = function () {
+                resultElement.innerText = "请求超时，请稍后重试。";
+            };
             xmlhttp.open("POST", uri, true);
             xmlhttp.onreadystatechange = function () {
                 if (xmlhttp.readyState == 4) {
