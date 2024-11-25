@@ -9,7 +9,7 @@ from PIL import Image
 
 # Hugging Face 模型 API 配置
 API_URL = "https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-dev"
-HEADERS = {"Authorization": "Bearer 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"}
+HEADERS = {"Authorization": "Bearer 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"}
 
 # 随机字符串生成器
 def random_str(num=5):
