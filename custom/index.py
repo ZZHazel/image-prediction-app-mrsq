@@ -1,59 +1,65 @@
 # -*- coding: utf-8 -*-
-
-from imageai.Prediction import ImagePrediction
+import requests
 import base64
 import bottle
 import random
 import json
-import urllib.request
+import io
+from PIL import Image
 
+# Hugging Face 模型 API 配置
+API_URL = "https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-dev"
+HEADERS = {"Authorization": "Bearer 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"}
 
-# 随机字符串
+# 随机字符串生成器
+def random_str(num=5):
+    return "".join(random.sample('abcdefghijklmnopqrstuvwxyz', num))
 
-def randomStr(num=5): return "".join(
-    random.sample('abcdefghijklmnopqrstuvwxyz', num))
-
-
-# 模型加载
-prediction = ImagePrediction()
-prediction.setModelTypeAsResNet()
-prediction.setModelPath("/code/model/resnet50_weights_tf_dim_ordering_tf_kernels.h5")
-prediction.loadModel()
-
-
-def predFunc(imagePath):
-    # 内容预测
-    result = {}
-    predictions, probabilities = prediction.predictImage(imagePath, result_count=5)
-    for eachPrediction, eachProbability in zip(predictions, probabilities):
-        result[str(eachPrediction)] = str(eachProbability)
-    return result
-
-
-@bottle.route('/image_prediction', method='POST')
-def getNextLine():
-    imagePath = "/tmp/%s" % randomStr(10)
-    postData = json.loads(bottle.request.body.read().decode("utf-8"))
-    image = postData.get("image", None)
-    if image:
-        image = image.split("base64,")[1]
-        # 图片获取
-        with open(imagePath, 'wb') as f:
-            f.write(base64.b64decode(image))
+# 查询 Hugging Face 模型
+def query_model(prompt):
+    payload = {"inputs": prompt}
+    response = requests.post(API_URL, headers=HEADERS, json=payload)
+    if response.status_code == 200 and "image" in response.headers.get("content-type", ""):
+        return response.content
     else:
-        image_path = postData.get("image_path", None)
-        response = urllib.request.urlopen(image_path).read()
-        with open(imagePath, 'wb') as f:
-            f.write(response)
+        return None, response.json() if response.headers.get("content-type") == "application/json" else response.text
 
-    return predFunc(imagePath)
+# Bottle 路由
+@bottle.route('/generate_image', method='POST')
+def generate_image():
+    try:
+        # 获取 POST 数据
+        post_data = json.loads(bottle.request.body.read().decode("utf-8"))
+        prompt = post_data.get("prompt", None)
 
+        if not prompt:
+            return {"error": "Missing 'prompt' in the request body."}
+
+        # 调用 Hugging Face 模型
+        image_bytes, error = query_model(prompt)
+
+        if not image_bytes:
+            return {"error": "Failed to generate image.", "details": error}
+
+        # 将图像保存到临时路径
+        image_path = f"/tmp/{random_str(10)}.png"
+        with open(image_path, 'wb') as f:
+            f.write(image_bytes)
+
+        # 返回 Base64 编码图像
+        with open(image_path, "rb") as f:
+            encoded_image = base64.b64encode(f.read()).decode("utf-8")
+
+        return {"image": f"data:image/png;base64,{encoded_image}"}
+
+    except Exception as e:
+        return {"error": str(e)}
 
 @bottle.route('/', method='GET')
-def getNextLine():
+def index():
     return bottle.template('./html/index.html')
 
-
+# Bottle 应用
 app = bottle.default_app()
 
 if __name__ == "__main__":
