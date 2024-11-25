@@ -20,9 +20,10 @@ def query_model(prompt):
     payload = {"inputs": prompt}
     response = requests.post(API_URL, headers=HEADERS, json=payload)
     if response.status_code == 200 and "image" in response.headers.get("content-type", ""):
-        return response.content
+        return response.content, None
     else:
-        return None, response.json() if response.headers.get("content-type") == "application/json" else response.text
+        error_details = response.json() if response.headers.get("content-type") == "application/json" else response.text
+        return None, error_details
 
 # Bottle 路由
 @bottle.route('/generate_image', method='POST')
@@ -38,7 +39,7 @@ def generate_image():
         # 调用 Hugging Face 模型
         image_bytes, error = query_model(prompt)
 
-        if not image_bytes:
+        if error:
             return {"error": "Failed to generate image.", "details": error}
 
         # 将图像保存到临时路径
