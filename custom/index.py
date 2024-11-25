@@ -19,7 +19,7 @@ def random_str(num=5):
 # 查询 Hugging Face 模型
 def query_model(prompt):
     payload = {"inputs": prompt}
-    response = requests.post(API_URL, headers=HEADERS, json=payload,timeout=600)
+    response = requests.post(API_URL, headers=HEADERS, json=payload,timeout=6000)
     if response.status_code == 200 and "image" in response.headers.get("content-type", ""):
         return response.content, None
     else:
